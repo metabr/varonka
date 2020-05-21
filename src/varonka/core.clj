@@ -60,6 +60,11 @@
     (irc/message @connection channel "превед")
     (println "Connected.")))
 
+(defn quit! []
+  (irc/message @connection channel "пака")
+  (irc/quit @connection)
+  (shutdown-agents))
+
 (defroutes app
   (GET "/status" [] "OK")
   (route/not-found "🔦"))
@@ -67,4 +72,6 @@
 (defn -main [& args]
   (println "Connecting...")
   (future (connect!))
+  (.addShutdownHook (Runtime/getRuntime)
+                    (Thread. ^Runnable quit!))
   (server/run-server app {:port 8080}))
