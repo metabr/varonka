@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  varonka:
+    build:
+      context: .
+    environment:
+      - VARONKA_NICK=varonka-dev
+    ports:
+      - "8080:8080"
