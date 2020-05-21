@@ -32,7 +32,7 @@
   (try
     (let [page (fetch-url url)
           title (first (html/select page [:title]))]
-      (apply clojure.string/trim (:content title)))
+      (str "⤷ " (apply clojure.string/trim (:content title))))
     (catch Exception e (println "caught exception fetching" url \newline (.getMessage e)))))
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
