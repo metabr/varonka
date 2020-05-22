@@ -28,19 +28,25 @@
 (defn fetch-url [url]
   (html/html-resource (java.net.URL. url)))
 
-(defn page-title [url]
+(defn page-title [url prefix]
   (try
     (let [page (fetch-url url)
           title (first (html/select page [:title]))]
-      (str "⤷ " (apply clojure.string/trim (:content title))))
+      (str prefix (apply clojure.string/trim (:content title))))
     (catch Exception e (println "caught exception fetching" url \newline (.getMessage e)))))
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
 
+(defn process-url [conn target text prefix]
+  (if-let [result (re-find url-re text)]
+    (let [url (first result)
+          title (page-title url prefix)]
+      (irc/message conn target title)
+      title)))
+
 (defn privmsg-callback [conn t & s]
-  (if-let [res (re-find url-re (:text t))]
-    (let [url (first res)]
-      (irc/message @connection (:target t) (page-title url)))))
+  (if-let [title (process-url conn (:target t) (:text t) "⤷ ")]
+    (process-url conn (:target t) title "  ⤷ ")))
 
 (def callbacks
   {:raw-log stdout-callback
