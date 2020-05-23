@@ -1,8 +1,10 @@
 (ns varonka.core
   (:gen-class)
-  (:require [compojure.core :refer :all]
+  (:require [clojure.string :refer [trim replace starts-with?]]
+            [compojure.core :refer :all]
             [compojure.route :as route]
             [org.httpkit.server :as server]
+            [clj-http.client :as client]
             [net.cgrand.enlive-html :as html]
             [irclj.core :as irc]
             [irclj.events :refer [stdout-callback]]))
@@ -26,13 +28,17 @@
       "#varonka"))
 
 (defn fetch-url [url]
-  (html/html-resource (java.net.URL. url)))
+  (if (-> (client/head url)
+          :headers
+          :content-type
+          (starts-with? "text/html"))
+    (html/html-resource (java.net.URL. url))))
 
 (defn page-title [url prefix]
   (try
-    (let [page (fetch-url url)
-          title (first (html/select page [:title]))]
-      (str prefix (apply clojure.string/trim (:content title))))
+    (if-let [page (fetch-url url)]
+      (let [title (first (html/select page [:title]))]
+        (str prefix (apply trim (:content title)))))
     (catch Exception e (println "caught exception fetching" url \newline (.getMessage e)))))
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
