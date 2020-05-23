@@ -45,7 +45,9 @@
 
 (defn process-url [conn target text prefix]
   (if-let [result (re-find url-re text)]
-    (let [url (first result)
+    (let [url (-> (first result)
+                  (replace #"\"$" "")
+                  (replace #"…$" ""))
           title (page-title url prefix)]
       (irc/message conn target title)
       title)))
