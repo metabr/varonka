@@ -1,6 +1,7 @@
 (ns varonka.core
   (:gen-class)
-  (:require [clojure.string :refer [trim replace starts-with?]]
+  (:require [clojure.edn :as edn]
+            [clojure.string :refer [trim replace starts-with?]]
             [compojure.core :refer :all]
             [compojure.route :as route]
             [org.httpkit.server :as server]
@@ -10,6 +11,7 @@
             [irclj.events :refer [stdout-callback]]))
 
 (def connection (ref {}))
+(def greetings (atom {}))
 
 (def irc-server
   (or (System/getenv "VARONKA_IRC_SERVER")
@@ -26,6 +28,10 @@
 (def channel 
   (or (System/getenv "VARONKA_CHANNEL")
       "#varonka"))
+
+(def greetings-path
+  (or (System/getenv "VARONKA_GREETINGS")
+      "./default-greetings.edn"))
 
 (defn fetch-url [url]
   (if (-> (client/head url)
@@ -56,12 +62,30 @@
   (if-let [title (process-url conn (:target t) (:text t) "⤷ ")]
     (process-url conn (:target t) title "  ⤷ ")))
 
+(defn join-callback [conn t & s]
+  (let [nick (:nick t)
+        filter-fn (fn [{nick-pattern :nick}]
+                    (re-matches (re-pattern nick-pattern) nick))]
+    (if-let [match (first (filter filter-fn @greetings))]
+      (irc/message conn channel (match :message)))))
+
 (def callbacks
   {:raw-log stdout-callback
-   :privmsg privmsg-callback})
+   :privmsg privmsg-callback
+   :join join-callback})
+
+(defn load-greetings! []
+  (try
+    (println "Loading greetings from" greetings-path)
+    (reset! greetings (edn/read-string (slurp greetings-path)))
+    "OK"
+    (catch Exception e
+      (println "caught exception loading greetings: " (.getMessage e))
+      "ERROR")))
 
 (defn connect! []
   (dosync
+    (load-greetings!)
     (ref-set
       connection
       (irc/connect
@@ -81,6 +105,7 @@
 
 (defroutes app
   (GET "/status" [] "OK")
+  (POST "/reload" [] (fn [_] (load-greetings!)))
   (route/not-found "🔦"))
 
 (defn -main [& args]

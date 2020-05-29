@@ -11,3 +11,4 @@ pom.xml.asc
 .hgignore
 .hg/
 docker-compose.prod.yml
+greetings.edn
