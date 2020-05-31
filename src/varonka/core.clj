@@ -33,8 +33,10 @@
   (or (System/getenv "VARONKA_GREETINGS")
       "./default-greetings.edn"))
 
+(def user-agent "varonka/0.0.1")
+
 (defn fetch-url [url]
-  (if (-> (client/head url)
+  (if (-> (client/head url {:headers {"User-Agent" user-agent}})
           :headers
           :content-type
           (starts-with? "text/html"))
@@ -108,7 +110,11 @@
   (POST "/reload" [] (fn [_] (load-greetings!)))
   (route/not-found "🔦"))
 
+(defn set-user-agent! []
+  (System/setProperty "http.agent" user-agent))
+
 (defn -main [& args]
+  (set-user-agent!)
   (println "Connecting...")
   (future (connect!))
   (.addShutdownHook (Runtime/getRuntime)
