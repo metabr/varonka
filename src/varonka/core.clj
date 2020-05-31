@@ -21,9 +21,14 @@
   (or (System/getenv "VARONKA_IRC_PORT")
       7000))
 
+(defn random-nickname []
+  (let [cs (map char (range 97 123))
+        postfix (take 4 (repeatedly #(rand-nth cs)))]
+    (str "varonka-" (reduce str postfix))))
+
 (def nick
   (or (System/getenv "VARONKA_NICK")
-      "varonka"))
+      (random-nickname)))
 
 (def channel 
   (or (System/getenv "VARONKA_CHANNEL")

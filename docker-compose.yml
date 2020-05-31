@@ -5,7 +5,6 @@ services:
     build:
       context: .
     environment:
-      - VARONKA_NICK=varonka-dev
       - VARONKA_GREETINGS=/tmp/varonka/greetings.edn
     ports:
       - "8080:8080"
