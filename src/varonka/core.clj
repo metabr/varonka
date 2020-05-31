@@ -35,16 +35,20 @@
 
 (def user-agent "varonka/0.0.1")
 
-(defn fetch-url [url]
-  (if (-> (client/head url {:headers {"User-Agent" user-agent}})
-          :headers
-          :content-type
-          (starts-with? "text/html"))
+(defn check-head-content-type [url content-type]
+  (if (string? content-type)
+    (-> (client/head url {:headers {"User-Agent" user-agent}})
+        :headers :content-type
+        (starts-with? content-type))
+    true))
+
+(defn fetch-url [url content-type]
+  (if (check-head-content-type url content-type)
     (html/html-resource (java.net.URL. url))))
 
 (defn page-title [url prefix]
   (try
-    (if-let [page (fetch-url url)]
+    (if-let [page (fetch-url url "text/html")]
       (let [title (first (html/select page [:title]))]
         (str prefix (apply trim (:content title)))))
     (catch Exception e (println "caught exception fetching" url \newline (.getMessage e)))))
