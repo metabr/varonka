@@ -69,9 +69,15 @@
       (irc/message conn target title)
       title)))
 
-(defn privmsg-callback [conn t & s]
-  (if-let [title (process-url conn (:target t) (:text t) "⤷ ")]
-    (process-url conn (:target t) title "  ⤷ ")))
+(defn privmsg-callback [conn {:keys [target text]} & s]
+  (if-let [title (process-url conn target text "⤷ ")]
+    (process-url conn target title "  ⤷ ")
+    (if-let [match (re-matches #"^[у|У]+$" (trim text))]
+      (irc/message conn target
+                   (condp < (count match)
+                     23 "МУЛАРКА!!!"
+                     7  "муларка!"
+                     nil)))))
 
 (defn join-callback [conn t & s]
   (let [nick (:nick t)
