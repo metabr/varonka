@@ -74,6 +74,8 @@
 (def coffee-re #"^[к|К]+[о|О]+[ф|Ф]+[е|Е]+.*")
 (def coffee-responses ["☕" "🍰" "☕" "🧁" "☕" "🥐" "☕" "🍪" "☕"])
 
+(def water-re #"^[в|В][о|О][Д|д][Ы|ы]+.*")
+
 (defn privmsg-callback [conn {:keys [target text]} & s]
   (if-let [msg (process-url text "⤷ ")]
     (do
@@ -84,6 +86,7 @@
                    mularka-re "муларка!"
                    mularka-long-re "МУЛАРКА!!!"
                    coffee-re (rand-nth coffee-responses)
+                   water-re "🌊"
                    nil))))
 
 (defn join-callback [conn t & s]
