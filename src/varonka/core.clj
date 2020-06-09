@@ -93,12 +93,18 @@
                    water-re "🌊"
                    nil))))
 
-(defn join-callback [conn t & s]
-  (let [nick (:nick t)
-        filter-fn (fn [{nick-pattern :nick}]
-                    (re-matches (re-pattern nick-pattern) nick))]
-    (if-let [match (first (filter filter-fn @greetings))]
-      (irc/message conn channel (match :message)))))
+(defn join-callback [conn t & _]
+  (let [joined-nick (:nick t)
+        joined-channel (first (:params t))
+        filter-fn
+        (fn [{nick-pattern :nick}]
+          (re-matches (re-pattern nick-pattern) joined-nick))
+        greeting
+        (if (= joined-nick nick)
+          "преветик"
+          (if-let [match (first (filter filter-fn @greetings))]
+            (:message match)))]
+    (irc/message conn joined-channel greeting)))
 
 (def callbacks
   {:raw-log stdout-callback
@@ -126,7 +132,6 @@
         :ssl? true))
     (println "Joining channel" channel)
     (irc/join @connection channel)
-    (irc/message @connection channel "превед")
     (println "Connected.")))
 
 (defn quit! []
