@@ -88,13 +88,13 @@
       (do
         (irc/message conn target msg)
         (irc/message conn target (process-url msg "  ⤷ ")))
-      (irc/message conn target
-                   (condp re-matches text
-                     mularka-re "муларка!"
-                     mularka-long-re "МУЛАРКА!!!"
-                     coffee-re (rand-nth coffee-responses)
-                     water-re "🌊"
-                     nil)))))
+      (let [msg (condp re-matches text
+                  mularka-re "муларка!"
+                  mularka-long-re "МУЛАРКА!!!"
+                  coffee-re (rand-nth coffee-responses)
+                  water-re "🌊"
+                  nil)]
+        (if msg (irc/message conn target msg))))))
 
 (defn join-callback [conn t & _]
   (let [joined-nick (:nick t)
@@ -107,7 +107,8 @@
           "преветик"
           (if-let [match (first (filter filter-fn @greetings))]
             (:message match)))]
-    (irc/message conn joined-channel greeting)))
+    (if greeting
+      (irc/message conn joined-channel greeting))))
 
 (def callbacks
   {:raw-log stdout-callback
