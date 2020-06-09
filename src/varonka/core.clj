@@ -80,18 +80,21 @@
 
 (def water-re #"^[в|В][о|О][Д|д][Ы|ы]+.*")
 
-(defn privmsg-callback [conn {:keys [target text]} & s]
-  (if-let [msg (process-url text "⤷ ")]
-    (do
-      (irc/message conn target msg)
-      (irc/message conn target (process-url msg "  ⤷ ")))
-    (irc/message conn target
-                 (condp re-matches text
-                   mularka-re "муларка!"
-                   mularka-long-re "МУЛАРКА!!!"
-                   coffee-re (rand-nth coffee-responses)
-                   water-re "🌊"
-                   nil))))
+(defn privmsg-callback [conn {:keys [target text] :as t} & s]
+  (let [target (if (= target nick)
+                 (:nick t)
+                 target)]
+    (if-let [msg (process-url text "⤷ ")]
+      (do
+        (irc/message conn target msg)
+        (irc/message conn target (process-url msg "  ⤷ ")))
+      (irc/message conn target
+                   (condp re-matches text
+                     mularka-re "муларка!"
+                     mularka-long-re "МУЛАРКА!!!"
+                     coffee-re (rand-nth coffee-responses)
+                     water-re "🌊"
+                     nil)))))
 
 (defn join-callback [conn t & _]
   (let [joined-nick (:nick t)
