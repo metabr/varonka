@@ -60,24 +60,31 @@
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
 
-(defn process-url [conn target text prefix]
+(defn process-url [text prefix]
   (if-let [result (re-find url-re text)]
     (let [url (-> (first result)
                   (replace #"\"$" "")
                   (replace #"…$" ""))
           title (page-title url prefix)]
-      (irc/message conn target title)
-      title)))
+      (page-title url prefix))))
+
+(def mularka-re #"^[у|У]{8,}$")
+(def mularka-long-re #"^[у|У]{24,}$")
+
+(def coffee-re #"^[к|К]+[о|О]+[ф|Ф]+[е|Е]+.*")
+(def coffee-responses ["☕" "🍰" "☕" "🧁" "☕" "🥐" "☕" "🍪" "☕"])
 
 (defn privmsg-callback [conn {:keys [target text]} & s]
-  (if-let [title (process-url conn target text "⤷ ")]
-    (process-url conn target title "  ⤷ ")
-    (if-let [match (re-matches #"^[у|У]+$" (trim text))]
-      (irc/message conn target
-                   (condp < (count match)
-                     23 "МУЛАРКА!!!"
-                     7  "муларка!"
-                     nil)))))
+  (if-let [msg (process-url text "⤷ ")]
+    (do
+      (irc/message conn target msg)
+      (irc/message conn target (process-url msg "  ⤷ ")))
+    (irc/message conn target
+                 (condp re-matches text
+                   mularka-re "муларка!"
+                   mularka-long-re "МУЛАРКА!!!"
+                   coffee-re (rand-nth coffee-responses)
+                   nil))))
 
 (defn join-callback [conn t & s]
   (let [nick (:nick t)
