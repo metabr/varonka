@@ -13,6 +13,10 @@
 (def connection (ref {}))
 (def greetings (atom {}))
 
+(def port
+  (or (System/getenv "VARONKA_PORT")
+      10927))
+
 (def irc-server
   (or (System/getenv "VARONKA_IRC_SERVER")
       "irc.freenode.net"))
@@ -144,4 +148,4 @@
   (future (connect!))
   (.addShutdownHook (Runtime/getRuntime)
                     (Thread. ^Runnable quit!))
-  (server/run-server app {:port 8080}))
+  (server/run-server app {:port port}))

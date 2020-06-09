@@ -7,6 +7,6 @@ services:
     environment:
       - VARONKA_GREETINGS=/tmp/varonka/greetings.edn
     ports:
-      - "8080:8080"
+      - "10927:10927"
     volumes:
       - ${PWD}/default-greetings.edn:/tmp/varonka/greetings.edn
