@@ -146,10 +146,11 @@
         irc-server irc-port nick
         :pass (System/getenv "VARONKA_PASS")
         :callbacks callbacks
-        :ssl? true))
-    (println "Joining channels" channels)
-    (run! #(irc/join @connection %) channels)
-    (println "Connected.")))
+        :ssl? true)))
+  (println "Joining channels" channels)
+  (Thread/sleep 1000)
+  (run! #(irc/join @connection %) channels)
+  (println "Connected."))
 
 (defn quit! []
   (run! #(irc/message @connection % "пака") channels)
