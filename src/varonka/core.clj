@@ -1,7 +1,7 @@
 (ns varonka.core
   (:gen-class)
   (:require [clojure.edn :as edn]
-            [clojure.string :refer [trim replace starts-with?]]
+            [clojure.string :refer [trim replace starts-with? split]]
             [compojure.core :refer :all]
             [compojure.route :as route]
             [org.httpkit.server :as server]
@@ -34,9 +34,11 @@
   (or (System/getenv "VARONKA_NICK")
       (random-nickname)))
 
-(def channel 
-  (or (System/getenv "VARONKA_CHANNEL")
-      "#varonka"))
+(def channels
+  (split
+    (or (System/getenv "VARONKA_CHANNELS")
+        "#varonka")
+    #","))
 
 (def greetings-path
   (or (System/getenv "VARONKA_GREETINGS")
@@ -134,12 +136,12 @@
         :pass (System/getenv "VARONKA_PASS")
         :callbacks callbacks
         :ssl? true))
-    (println "Joining channel" channel)
-    (irc/join @connection channel)
+    (println "Joining channels" channels)
+    (run! #(irc/join @connection %) channels)
     (println "Connected.")))
 
 (defn quit! []
-  (irc/message @connection channel "пака")
+  (run! #(irc/message @connection % "пака") channels)
   (irc/quit @connection)
   (shutdown-agents))
 

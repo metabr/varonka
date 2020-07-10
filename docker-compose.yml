@@ -6,6 +6,7 @@ services:
       context: .
     environment:
       - VARONKA_GREETINGS=/tmp/varonka/greetings.edn
+      - VARONKA_CHANNELS=#varonka,#church_of_enot
     ports:
       - "10927:10927"
     volumes:
