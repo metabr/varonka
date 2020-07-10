@@ -1,4 +1,5 @@
 FROM clojure:openjdk-14-alpine
+RUN apk add --no-cache python3 && pip3 install youtube_dl
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 COPY project.clj /usr/src/app/

@@ -1,6 +1,7 @@
 (ns varonka.core
   (:gen-class)
   (:require [clojure.edn :as edn]
+            [clojure.java.shell :refer [sh]]
             [clojure.string :refer [trim replace starts-with? split]]
             [compojure.core :refer :all]
             [compojure.route :as route]
@@ -65,6 +66,14 @@
     (catch Exception e (println "caught exception fetching" url \newline (.getMessage e)))))
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
+(def youtube-re #"(youtube\.com)|(youtu\.be)")
+
+(defn youtube-title [url prefix]
+  (let [result (sh "youtube-dl" "--get-title" url)]
+    (if (== 0 (:exit result))
+      (str prefix (trim (:out result)))
+      (println "Failed to get title for" url \newline
+               "Result:" result))))
 
 (defn process-url [text prefix]
   (if-let [result (re-find url-re text)]
@@ -72,7 +81,9 @@
                   (replace #"\"$" "")
                   (replace #"…$" ""))
           title (page-title url prefix)]
-      (page-title url prefix))))
+      (if (re-find youtube-re url)
+        (youtube-title url prefix)
+        (page-title url prefix)))))
 
 (def mularka-re #"^[у|У]{8,}$")
 (def mularka-long-re #"^[у|У]{24,}$")
