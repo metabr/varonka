@@ -54,9 +54,12 @@
         (starts-with? content-type))
     true))
 
-(defn fetch-url [url content-type]
-  (if (check-head-content-type url content-type)
-    (html/html-resource (java.net.URL. url))))
+(defn fetch-url 
+  ([url content-type]
+   (if (check-head-content-type url content-type)
+     (html/html-resource (java.net.URL. url))))
+  ([url]
+   (fetch-url url "text/html")))
 
 (defn page-title [url prefix]
   (try
@@ -67,6 +70,8 @@
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
 (def youtube-re #"(youtube\.com)|(youtu\.be)")
+(def twitter-re #"http[s]?\:\/\/twitter\.com\/")
+(def mobile-twitter-re #"http[s]?\:\/\/mobile\.twitter\.com\/")
 
 (defn youtube-title [url prefix]
   (let [result (sh "youtube-dl" "--get-title" url)]
@@ -75,15 +80,25 @@
       (println "Failed to get title for" url \newline
                "Result:" result))))
 
+(defn tweet-text [url prefix]
+  (try
+    (if-let [page (fetch-url url)]
+      (let [text (-> page (html/select [:div.tweet-text])
+                     first html/text trim)]
+        (str prefix text)))
+    (catch Exception e (println "caught exception fetching" url \newline (.getMessage e)))))
+
 (defn process-url [text prefix]
   (if-let [result (re-find url-re text)]
     (let [url (-> (first result)
                   (replace #"\"$" "")
                   (replace #"…$" ""))
           title (page-title url prefix)]
-      (if (re-find youtube-re url)
-        (youtube-title url prefix)
-        (page-title url prefix)))))
+      (cond
+        (re-find youtube-re url) (youtube-title url prefix)
+        (re-find twitter-re url) (tweet-text (replace url twitter-re "https://mobile.twitter.com/") prefix)
+        (re-find mobile-twitter-re url) (tweet-text url prefix)
+        :default (page-title url prefix)))))
 
 (def mularka-re #"^[у|У]{8,}$")
 (def mularka-long-re #"^[у|У]{24,}$")
