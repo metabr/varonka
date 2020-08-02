@@ -23,8 +23,9 @@
       "irc.freenode.net"))
 
 (def irc-port 
-  (or (System/getenv "VARONKA_IRC_PORT")
-      7000))
+  (if-let [port (System/getenv "VARONKA_IRC_PORT")]
+    (Integer/parseInt port)
+    7000))
 
 (def ssl?
   (if (System/getenv "VARONKA_NOSSL")
