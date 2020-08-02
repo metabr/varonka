@@ -26,6 +26,11 @@
   (or (System/getenv "VARONKA_IRC_PORT")
       7000))
 
+(def ssl?
+  (if (System/getenv "VARONKA_NOSSL")
+    false
+    true))
+
 (defn random-nickname []
   (let [cs (map char (range 97 123))
         postfix (take 4 (repeatedly #(rand-nth cs)))]
@@ -161,7 +166,7 @@
         irc-server irc-port nick
         :pass (System/getenv "VARONKA_PASS")
         :callbacks callbacks
-        :ssl? true)))
+        :ssl? ssl?)))
   (println "Joining channels" channels)
   (Thread/sleep 1000)
   (run! #(irc/join @connection %) channels)
