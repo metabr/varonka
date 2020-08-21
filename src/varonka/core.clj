@@ -15,16 +15,17 @@
 (def greetings (atom {}))
 
 (def port
-  (or (System/getenv "VARONKA_PORT")
-      10927))
+  (if-let [p (System/getenv "VARONKA_PORT")]
+    (Integer/parseInt p)
+    10927))
 
 (def irc-server
   (or (System/getenv "VARONKA_IRC_SERVER")
       "irc.freenode.net"))
 
 (def irc-port 
-  (if-let [port (System/getenv "VARONKA_IRC_PORT")]
-    (Integer/parseInt port)
+  (if-let [p (System/getenv "VARONKA_IRC_PORT")]
+    (Integer/parseInt p)
     7000))
 
 (def ssl?
