@@ -179,9 +179,14 @@
   (irc/quit @connection)
   (shutdown-agents))
 
+(defn reconnect! []
+  (irc/kill @connection)
+  (connect!))
+
 (defroutes app
   (GET "/status" [] "OK")
   (POST "/reload" [] (fn [_] (load-greetings!)))
+  (POST "/reconnect" [] (fn [_] (reconnect!)))
   (route/not-found "🔦"))
 
 (defn set-user-agent! []
