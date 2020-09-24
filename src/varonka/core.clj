@@ -200,8 +200,8 @@
 
 (defroutes app
   (GET "/status" [] "OK")
-  (POST "/reload" [] (fn [_] (load-greetings!)))
-  (POST "/reconnect" [] (fn [_] (reconnect!)))
+  (POST "/reload" [] (fn [_] (load-greetings!) "done"))
+  (POST "/reconnect" [] (fn [_] (reconnect!) "done"))
   (route/not-found "🔦"))
 
 (defn set-user-agent! []
