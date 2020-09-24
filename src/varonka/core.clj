@@ -1,6 +1,7 @@
 (ns varonka.core
   (:gen-class)
   (:require [clojure.edn :as edn]
+            [clojure.core.async :refer [thread]]
             [clojure.java.shell :refer [sh]]
             [clojure.string :refer [trim replace starts-with? split]]
             [compojure.core :refer :all]
@@ -8,11 +9,11 @@
             [org.httpkit.server :as server]
             [clj-http.client :as client]
             [net.cgrand.enlive-html :as html]
-            [irclj.core :as irc]
-            [irclj.events :refer [stdout-callback]]))
+            [irclj.core :as irc]))
 
 (def connection (ref {}))
 (def greetings (atom {}))
+(def last-activity (atom (System/currentTimeMillis)))
 
 (def port
   (if-let [p (System/getenv "VARONKA_PORT")]
@@ -51,6 +52,12 @@
 (def greetings-path
   (or (System/getenv "VARONKA_GREETINGS")
       "./default-greetings.edn"))
+
+(def ping-timeout
+  (* 1000
+     (if-let [t (System/getenv "VARONKA_PING_TIMEOUT")]
+       (Integer/parseInt t)
+       180)))
 
 (def user-agent "varonka/0.0.1")
 
@@ -145,8 +152,16 @@
     (if greeting
       (irc/message conn joined-channel greeting))))
 
+(defn raw-callback [_ t s]
+  (case t
+    :write
+    (println ">> " s)
+    :read
+    (do (reset! last-activity (System/currentTimeMillis))
+        (println s))))
+
 (def callbacks
-  {:raw-log stdout-callback
+  {:raw-log raw-callback
    :privmsg privmsg-callback
    :join join-callback})
 
@@ -192,10 +207,21 @@
 (defn set-user-agent! []
   (System/setProperty "http.agent" user-agent))
 
+(defn ping-timeout-watcher []
+  (while true
+    (let [cur (System/currentTimeMillis)
+          diff (- cur @last-activity)]
+      (if (> diff ping-timeout)
+        (do (println "PING timeout exceeded, reconnecting!")
+            (reset! last-activity cur)
+            (reconnect!))))
+    (Thread/sleep 10000)))
+
 (defn -main [& args]
   (set-user-agent!)
   (println "Connecting...")
   (future (connect!))
+  (thread (ping-timeout-watcher))
   (.addShutdownHook (Runtime/getRuntime)
                     (Thread. ^Runnable quit!))
   (server/run-server app {:port port}))
