@@ -93,7 +93,7 @@
     (if (== 0 (:exit result))
       (str prefix (trim (:out result)))
       (warn "Failed to get title for" url \newline
-               "Result:" result))))
+            "Result:" result))))
 
 (defn tweet-text [url prefix]
   (try
@@ -168,9 +168,10 @@
 
 (defn load-greetings! []
   (try
-    (debug "Loading greetings from" greetings-path)
-    (reset! greetings (edn/read-string (slurp greetings-path)))
-    "OK"
+    (do
+      (debug "Loading greetings from" greetings-path)
+      (reset! greetings (edn/read-string (slurp greetings-path)))
+      "OK")
     (catch Exception e
       (error "caught exception loading greetings: " (.getMessage e))
       "ERROR")))
@@ -201,7 +202,7 @@
 
 (defroutes app
   (GET "/status" [] "OK")
-  (POST "/reload" [] (fn [_] (load-greetings!) "done"))
+  (POST "/reload" [] (fn [_] (load-greetings!) (str @greetings \newline)))
   (POST "/reconnect" [] (fn [_] (reconnect!) "done"))
   (route/not-found "🔦"))
 
