@@ -46,9 +46,9 @@
 
 (def channels
   (split
-    (or (System/getenv "VARONKA_CHANNELS")
-        "#varonka")
-    #","))
+   (or (System/getenv "VARONKA_CHANNELS")
+       "#varonka")
+   #","))
 
 (def greetings-path
   (or (System/getenv "VARONKA_GREETINGS")
@@ -179,14 +179,14 @@
 
 (defn connect! []
   (dosync
-    (load-greetings!)
-    (ref-set
-      connection
-      (irc/connect
-        irc-server irc-port nick
-        :pass (System/getenv "VARONKA_PASS")
-        :callbacks callbacks
-        :ssl? ssl?)))
+   (load-greetings!)
+   (ref-set
+    connection
+    (irc/connect
+     irc-server irc-port nick
+     :pass (System/getenv "VARONKA_PASS")
+     :callbacks callbacks
+     :ssl? ssl?)))
   (log/debug :connect! {:message "connecting" :channels channels})
   (Thread/sleep 1000)
   (run! #(irc/join @connection %) channels)
