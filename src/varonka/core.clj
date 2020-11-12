@@ -4,7 +4,7 @@
             [clojure.core.async :refer [thread]]
             [clojure.java.shell :refer [sh]]
             [clojure.string :refer [trim replace starts-with? split]]
-            [clojure.tools.logging :refer [debug info warn error]]
+            [io.pedestal.log :as log]
             [compojure.core :refer :all]
             [compojure.route :as route]
             [org.httpkit.server :as server]
@@ -25,7 +25,7 @@
   (or (System/getenv "VARONKA_IRC_SERVER")
       "irc.freenode.net"))
 
-(def irc-port 
+(def irc-port
   (if-let [p (System/getenv "VARONKA_IRC_PORT")]
     (Integer/parseInt p)
     7000))
@@ -69,7 +69,7 @@
         (starts-with? content-type))
     true))
 
-(defn fetch-url 
+(defn fetch-url
   ([url content-type]
    (if (check-head-content-type url content-type)
      (html/html-resource (java.net.URL. url))))
@@ -81,7 +81,8 @@
     (if-let [page (fetch-url url "text/html")]
       (let [title (first (html/select page [:title]))]
         (str prefix (apply trim (:content title)))))
-    (catch Exception e (error "caught exception fetching" url \newline (.getMessage e)))))
+    (catch Exception e
+      (log/error :page-title {:message (.getMessage e) :url url}))))
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
 (def youtube-re #"(youtube\.com)|(youtu\.be)")
@@ -92,8 +93,7 @@
   (let [result (sh "youtube-dl" "--get-title" url)]
     (if (== 0 (:exit result))
       (str prefix (trim (:out result)))
-      (warn "Failed to get title for" url \newline
-            "Result:" result))))
+      (log/warn :youtube-title {:message "Failed to obtain title" :url url :result result}))))
 
 (defn tweet-text [url prefix]
   (try
@@ -101,7 +101,8 @@
       (let [text (-> page (html/select [:div.tweet-text])
                      first html/text trim)]
         (str prefix text)))
-    (catch Exception e (error "caught exception fetching" url \newline (.getMessage e)))))
+    (catch Exception e
+      (log/error :tweet-text {:message (.getMessage e) :url url}))))
 
 (defn process-url [text prefix]
   (if-let [result (re-find url-re text)]
@@ -156,10 +157,10 @@
 (defn raw-callback [_ t s]
   (case t
     :write
-    (info ">> " s)
+    (log/info :raw-callback/write {:message s})
     :read
     (do (reset! last-activity (System/currentTimeMillis))
-        (info s))))
+        (log/info :raw-callback/read {:message s}))))
 
 (def callbacks
   {:raw-log raw-callback
@@ -169,11 +170,11 @@
 (defn load-greetings! []
   (try
     (do
-      (debug "Loading greetings from" greetings-path)
+      (log/debug :load-greetings! {:path greetings-path})
       (reset! greetings (edn/read-string (slurp greetings-path)))
       "OK")
     (catch Exception e
-      (error "caught exception loading greetings: " (.getMessage e))
+      (log/error :load-greetings! {:message (.getMessage e)})
       "ERROR")))
 
 (defn connect! []
@@ -186,10 +187,10 @@
         :pass (System/getenv "VARONKA_PASS")
         :callbacks callbacks
         :ssl? ssl?)))
-  (debug "Joining channels" channels)
+  (log/debug :connect! {:message "connecting" :channels channels})
   (Thread/sleep 1000)
   (run! #(irc/join @connection %) channels)
-  (debug "Connected."))
+  (log/debug :connect! {:message "done"}))
 
 (defn quit! []
   (run! #(irc/message @connection % "пака") channels)
@@ -214,14 +215,17 @@
     (let [cur (System/currentTimeMillis)
           diff (- cur @last-activity)]
       (if (> diff ping-timeout)
-        (do (warn "PING timeout exceeded, reconnecting!")
+        (do (log/warn :ping-timeout-watcher
+                      {:message "PING timeout exceeded, reconnecting!"
+                       :cur cur :diff diff
+                       :last-activity @last-activity :ping-timeout ping-timeout})
             (reset! last-activity cur)
             (reconnect!))))
     (Thread/sleep 10000)))
 
 (defn -main [& args]
   (set-user-agent!)
-  (debug "Connecting...")
+  (log/debug :-main "Connecting...")
   (future (connect!))
   (thread (ping-timeout-watcher))
   (.addShutdownHook (Runtime/getRuntime)
