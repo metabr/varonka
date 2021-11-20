@@ -198,8 +198,14 @@
   (shutdown-agents))
 
 (defn reconnect! []
-  (irc/kill @connection)
-  (connect!))
+  (try
+    (do
+      (irc/kill @connection)
+      (connect!))
+    (catch Exception e
+      (log/error :reconnect! {:message (.getMessage e)})
+      (Thread/sleep 10000)
+      (reconnect!))))
 
 (defroutes app
   (GET "/status" [] "OK")
