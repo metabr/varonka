@@ -5,7 +5,7 @@
             [clojure.java.shell :refer [sh]]
             [clojure.string :refer [trim replace starts-with? split]]
             [io.pedestal.log :as log]
-            [compojure.core :refer :all]
+            [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
             [org.httpkit.server :as server]
             [clj-http.client :as client]
@@ -71,14 +71,14 @@
 
 (defn fetch-url
   ([url content-type]
-   (if (check-head-content-type url content-type)
+   (when (check-head-content-type url content-type)
      (html/html-resource (java.net.URL. url))))
   ([url]
    (fetch-url url "text/html")))
 
 (defn page-title [url prefix]
   (try
-    (if-let [page (fetch-url url "text/html")]
+    (when-let [page (fetch-url url "text/html")]
       (let [title (first (html/select page [:title]))]
         (str prefix (apply trim (:content title)))))
     (catch Exception e
@@ -97,7 +97,7 @@
 
 (defn tweet-text [url prefix]
   (try
-    (if-let [page (fetch-url url)]
+    (when-let [page (fetch-url url)]
       (let [text (-> page (html/select [:div.tweet-text])
                      first html/text trim)]
         (str prefix text)))
@@ -105,16 +105,15 @@
       (log/error :tweet-text {:message (.getMessage e) :url url}))))
 
 (defn process-url [text prefix]
-  (if-let [result (re-find url-re text)]
+  (when-let [result (re-find url-re text)]
     (let [url (-> (first result)
                   (replace #"\"$" "")
-                  (replace #"…$" ""))
-          title (page-title url prefix)]
+                  (replace #"…$" ""))]
       (cond
         (re-find youtube-re url) (youtube-title url prefix)
         (re-find twitter-re url) (tweet-text (replace url twitter-re "https://mobile.twitter.com/") prefix)
         (re-find mobile-twitter-re url) (tweet-text url prefix)
-        :default (page-title url prefix)))))
+        :else (page-title url prefix)))))
 
 (def mularka-re #"^[у|У]{8,}$")
 (def mularka-long-re #"^[у|У]{24,}$")
@@ -124,7 +123,7 @@
 
 (def water-re #"^[в|В][о|О][Д|д][Ы|ы]+.*")
 
-(defn privmsg-callback [conn {:keys [target text] :as t} & s]
+(defn privmsg-callback [conn {:keys [target text] :as t} & _]
   (let [target (if (= target nick)
                  (:nick t)
                  target)]
@@ -138,7 +137,7 @@
                   coffee-re (rand-nth coffee-responses)
                   water-re "🌊"
                   nil)]
-        (if msg (irc/message conn target msg))))))
+        (when msg (irc/message conn target msg))))))
 
 (defn join-callback [conn t & _]
   (let [joined-nick (:nick t)
@@ -149,9 +148,9 @@
         greeting
         (if (= joined-nick nick)
           "преветик"
-          (if-let [match (first (filter filter-fn @greetings))]
+          (when-let [match (first (filter filter-fn @greetings))]
             (:message match)))]
-    (if greeting
+    (when greeting
       (irc/message conn joined-channel greeting))))
 
 (defn raw-callback [_ t s]
@@ -169,10 +168,9 @@
 
 (defn load-greetings! []
   (try
-    (do
-      (log/debug :load-greetings! {:path greetings-path})
-      (reset! greetings (edn/read-string (slurp greetings-path)))
-      "OK")
+    (log/debug :load-greetings! {:path greetings-path})
+    (reset! greetings (edn/read-string (slurp greetings-path)))
+    "OK"
     (catch Exception e
       (log/error :load-greetings! {:message (.getMessage e)})
       "ERROR")))
@@ -199,9 +197,8 @@
 
 (defn reconnect! []
   (try
-    (do
-      (irc/kill @connection)
-      (connect!))
+    (irc/kill @connection)
+    (connect!)
     (catch Exception e
       (log/error :reconnect! {:message (.getMessage e)})
       (Thread/sleep 10000)
@@ -220,16 +217,16 @@
   (while true
     (let [cur (System/currentTimeMillis)
           diff (- cur @last-activity)]
-      (if (> diff ping-timeout)
-        (do (log/warn :ping-timeout-watcher
-                      {:message "PING timeout exceeded, reconnecting!"
-                       :cur cur :diff diff
-                       :last-activity @last-activity :ping-timeout ping-timeout})
-            (reset! last-activity cur)
-            (reconnect!))))
+      (when (> diff ping-timeout)
+        (log/warn :ping-timeout-watcher
+                  {:message "PING timeout exceeded, reconnecting!"
+                   :cur cur :diff diff
+                   :last-activity @last-activity :ping-timeout ping-timeout})
+        (reset! last-activity cur)
+        (reconnect!)))
     (Thread/sleep 10000)))
 
-(defn -main [& args]
+(defn -main [& _]
   (set-user-agent!)
   (log/debug :-main "Connecting...")
   (future (connect!))
