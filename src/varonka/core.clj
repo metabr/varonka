@@ -86,23 +86,13 @@
 
 (def url-re #"http[s]?\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?")
 (def youtube-re #"(youtube\.com)|(youtu\.be)")
-(def twitter-re #"http[s]?\:\/\/twitter\.com\/")
-(def mobile-twitter-re #"http[s]?\:\/\/mobile\.twitter\.com\/")
+(def twitter-re #"http[s]?\:\/\/.*[\.]?twitter\.com\/")
 
 (defn youtube-title [url prefix]
   (let [result (sh "youtube-dl" "--get-title" url)]
     (if (== 0 (:exit result))
       (str prefix (trim (:out result)))
       (log/warn :youtube-title {:message "Failed to obtain title" :url url :result result}))))
-
-(defn tweet-text [url prefix]
-  (try
-    (when-let [page (fetch-url url)]
-      (let [text (-> page (html/select [:div.tweet-text])
-                     first html/text trim)]
-        (str prefix text)))
-    (catch Exception e
-      (log/error :tweet-text {:message (.getMessage e) :url url}))))
 
 (defn process-url [text prefix]
   (when-let [result (re-find url-re text)]
@@ -111,8 +101,7 @@
                   (replace #"…$" ""))]
       (cond
         (re-find youtube-re url) (youtube-title url prefix)
-        (re-find twitter-re url) (tweet-text (replace url twitter-re "https://mobile.twitter.com/") prefix)
-        (re-find mobile-twitter-re url) (tweet-text url prefix)
+        (re-find twitter-re url) nil
         :else (page-title url prefix)))))
 
 (def mularka-re #"^[у|У]{8,}$")
@@ -131,13 +120,13 @@
       (do
         (irc/message conn target msg)
         (irc/message conn target (process-url msg "  ⤷ ")))
-      (let [msg (condp re-matches text
-                  mularka-re "муларка!"
-                  mularka-long-re "МУЛАРКА!!!"
-                  coffee-re (rand-nth coffee-responses)
-                  water-re "🌊"
-                  nil)]
-        (when msg (irc/message conn target msg))))))
+      (when-let [msg (condp re-matches text
+                       mularka-re "муларка!"
+                       mularka-long-re "МУЛАРКА!!!"
+                       coffee-re (rand-nth coffee-responses)
+                       water-re "🌊"
+                       nil)]
+        (irc/message conn target msg)))))
 
 (defn join-callback [conn t & _]
   (let [joined-nick (:nick t)
