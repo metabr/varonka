@@ -89,7 +89,7 @@
 (def twitter-re #"http[s]?\:\/\/.*[\.]?twitter\.com\/")
 
 (defn youtube-title [url prefix]
-  (let [result (sh "youtube-dl" "--get-title" url)]
+  (let [result (sh "yt-dlp" "--get-title" url)]
     (if (== 0 (:exit result))
       (str prefix (trim (:out result)))
       (log/warn :youtube-title {:message "Failed to obtain title" :url url :result result}))))
