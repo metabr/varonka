@@ -1,4 +1,4 @@
-FROM clojure:temurin-8-lein-alpine
+FROM clojure:temurin-21-lein-alpine
 RUN apk -U add yt-dlp
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
