@@ -12,3 +12,4 @@ pom.xml.asc
 .hg/
 docker-compose.prod.yml
 greetings.edn
+cookies.txt
