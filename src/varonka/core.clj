@@ -54,6 +54,9 @@
   (or (System/getenv "VARONKA_GREETINGS")
       "./default-greetings.edn"))
 
+(def cookies-path
+  (System/getenv "VARONKA_COOKIES"))
+
 (def ping-timeout
   (* 1000
      (if-let [t (System/getenv "VARONKA_PING_TIMEOUT")]
@@ -89,7 +92,7 @@
 (def twitter-re #"http[s]?\:\/\/.*[\.]?twitter\.com\/")
 
 (defn youtube-title [url prefix]
-  (let [result (sh "yt-dlp" "--cookies" "cookies.txt" "--get-title" url)]
+  (let [result (sh "yt-dlp" "--cookies" cookies-path "--get-title" url)]
     (if (== 0 (:exit result))
       (str prefix (trim (:out result)))
       (log/warn :youtube-title {:message "Failed to obtain title" :url url :result result}))))
