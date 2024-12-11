@@ -1,5 +1,5 @@
-FROM clojure:openjdk-14-alpine
-RUN apk add --no-cache python3 && pip3 install youtube_dl==2021.12.17
+FROM clojure:temurin-8-lein-alpine
+RUN apk -U add yt-dlp
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 COPY project.clj /usr/src/app/
